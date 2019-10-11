@@ -1,0 +1,78 @@
+version: '3.7'
+volumes:
+  db:
+    driver: local
+
+services:
+  osticket:
+    image: 'zinderud/osticket:1.12'
+    build: 
+      context: .
+      dockerfile: osticket.dockerfile
+    container_name: 'zinderudOsticket'
+    restart: always
+    links:
+      - db
+    depends_on:
+      - db
+    ports:
+      - "9000"
+    volumes:
+      - ./src/osTicket-1.12:/home/osticket/app
+      - ./configs/php/fpm/www.conf:/etc/php/7.2/fpm/pool.d/www.conf
+      - ./configs/php/fpm/php-fpm.conf:/etc/php/7.2/fpm/php-fpm.conf
+      - ./configs/php/fpm/php.ini:/etc/php/7.2/fpm/php.ini
+      - ./configs/php/cli/php.ini:/etc/php/7.2/cli/php.ini
+      - ./configs/supervisord/osticket.conf:/etc/supervisor/conf.d/osticket.conf
+      - ./configs/osticket/ost-config.php:/home/osticket/app/include/ost-config.php
+      - ./configs/osticket/ost-configtempl.php:/home/osticket/app/include/ost-config.php
+
+  db:
+    image: mysql:5.7
+    container_name: db
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - db:/var/lib/mysql
+
+  nginx:
+    image: 'zinderud/nginx:latest'
+    build: 
+      context: .
+      dockerfile: nginx.dockerfile
+    container_name: 'zinderudNginx'
+    restart: always
+    depends_on:
+      - osticket
+    links:
+      - osticket
+    ports:
+      - "80:80"
+    working_dir: /home/osticket/app
+    volumes:
+      - ./configs/nginx/conf.d:/etc/nginx/conf.d/
+      - ./configs/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./src/osTicket-1.12:/home/osticket/app
+
+  memcached:
+    image: memcached:1.5
+    restart: always
+    container_name: memcached
+
+  smtp:
+    image: 'zinderud/smtp'
+    container_name: 'zinderudSmtp'
+    build: 
+      context: .
+      dockerfile: smtp.dockerfile
+    restart: always
+    env_file: ./configs/smtp/smtp.env
+    ports:
+      - "127.0.0.1:25:25"
+      - "127.0.0.1:465:465"
+      - "127.0.0.1:587:587"
+    volumes:
+      - "./data:/data"
+      - "./certs:/certs"
+      - "./overrides:/overrides"

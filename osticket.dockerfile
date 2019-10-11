@@ -20,10 +20,10 @@ WORKDIR /home/osticket
 RUN mkdir -p /var/run/php && chown -R osticket:osticket /var/run/php
 RUN tar -xf /usr/src/app.tar.gz && mv osTicket-${APP_VERSION} app
 RUN chown -R osticket:osticket app
-ADD ./../configs/php/fpm/php-fpm.conf /etc/php/7.2/fpm/php-fpm.conf
-ADD ./../configs/php/fpm/php.ini /etc/php/7.2/fpm/php.ini
-ADD ./../configs/php/fpm/www.conf /etc/php/7.2/fpm/pool.d/www.conf
-ADD ./../configs/supervisord/osticket.conf /etc/supervisor/conf.d/osticket.conf
+ADD ./configs/php/fpm/php-fpm.conf /etc/php/7.2/fpm/php-fpm.conf
+ADD ./configs/php/fpm/php.ini /etc/php/7.2/fpm/php.ini
+ADD ./configs/php/fpm/www.conf /etc/php/7.2/fpm/pool.d/www.conf
+ADD ./configs/supervisord/osticket.conf /etc/supervisor/conf.d/osticket.conf
 
 WORKDIR /home/osticket/app
 EXPOSE 9000
