@@ -1,46 +1,63 @@
 <?php
 $BUTTONS = isset($BUTTONS) ? $BUTTONS : true;
 ?>
-    <div class="sidebar pull-right">
-<?php if ($BUTTONS) { ?>
-        <div class="front-page-button flush-right">
-<p>
-<?php
-    if ($cfg->getClientRegistrationMode() != 'disabled'
-        || !$cfg->isClientLoginRequired()) { ?>
-            <a href="open.php" style="display:block" class="blue button"><?php
-                echo __('Open a New Ticket');?></a>
-</p>
-<?php } ?>
-<p>
-            <a href="view.php" style="display:block" class="green button"><?php
-                echo __('Check Ticket Status');?></a>
-</p>
+<div class="col-xl-4">
+    <?php if ($BUTTONS) { ?>
+        <div class="card sameheight-items">
+            <div class="card-block">
+            <?php
+            if ($cfg->getClientRegistrationMode() != 'disabled'
+            || !$cfg->isClientLoginRequired()) { ?>
+                <a href="open.php" class="btn btn-block btn-lg btn-info-outline">
+                    <i class="fa fa-rocket"></i>
+                    <span><?php echo __('Open a New Ticket');?></span>
+                </a>
+            <?php } ?>
+                <a href="view.php" class="btn btn-block btn-lg btn-success-outline">
+                    <i class="fa fa-clock-o"></i>
+                    <span><?php echo __('Check Ticket Status');?></span>
+                </a>
+            </div>
         </div>
-<?php } ?>
-        <div class="content"><?php
+    <?php } ?>
+    <?php
     if ($cfg->isKnowledgebaseEnabled()
         && ($faqs = FAQ::getFeatured()->select_related('category')->limit(5))
         && $faqs->all()) { ?>
-            <section><div class="header"><?php echo __('Featured Questions'); ?></div>
-<?php   foreach ($faqs as $F) { ?>
-            <div><a href="<?php echo ROOT_PATH; ?>kb/faq.php?id=<?php
-                echo urlencode($F->getId());
-                ?>"><?php echo $F->getLocalQuestion(); ?></a></div>
-<?php   } ?>
-            </section>
-<?php
-    }
+    <div class="card sameheight-items">
+        <div class="card-block">
+            <div class="header-block bordered">
+                <h3 class="title"><?php echo __('Featured Questions'); ?></h3>
+            </div>
+            <hr>
+            <ul>
+                <?php   foreach ($faqs as $F) { ?>
+                <li><a href="<?php echo ROOT_PATH; ?>kb/faq.php?id=<?php
+                    echo urlencode($F->getId());
+                    ?>"><?php echo $F->getLocalQuestion(); ?></a></li>
+                <?php   } ?>
+            </ul>
+        </div>
+    </div>
+    <?php
+        }
     $resources = Page::getActivePages()->filter(array('type'=>'other'));
     if ($resources->all()) { ?>
-            <section><div class="header"><?php echo __('Other Resources'); ?></div>
-<?php   foreach ($resources as $page) { ?>
-            <div><a href="<?php echo ROOT_PATH; ?>pages/<?php echo $page->getNameAsSlug();
-            ?>"><?php echo $page->getLocalName(); ?></a></div>
-<?php   } ?>
-            </section>
-<?php
-    }
-        ?></div>
+    <div class="card">
+        <div class="card-header">
+            <div class="header-block">
+                <h3 class="title"><?php echo __('Other Resources'); ?></h3>
+            </div>
+        </div>
+        <div class="card-block">
+            <?php   foreach ($resources as $page) { ?>
+                <div><a href="<?php echo ROOT_PATH; ?>pages/<?php echo $page->getNameAsSlug();
+                ?>"><?php echo $page->getLocalName(); ?></a></div>
+            <?php   } ?>
+        </div>
     </div>
+        <?php
+    }
+    ?>
+</div>
 

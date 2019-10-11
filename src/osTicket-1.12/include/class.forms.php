@@ -1535,7 +1535,7 @@ class TextareaField extends FormField {
             'choices' => array(
                 function($val) {
                     $val = str_replace('"', '', JsonDataEncoder::encode($val));
-                    $regex = "/^(?! )[A-z0-9 _-]+:{1}[^\n]+$/";
+                    $regex = "/^(?! )[A-z0-9 _-]+:{1}[A-z0-9 _-]+$/";
                     foreach (explode('\r\n', $val) as $v) {
                         if (!preg_match($regex, $v))
                             return false;
@@ -1675,24 +1675,6 @@ class BooleanField extends FormField {
 
     function toString($value) {
         return ($value) ? __('Yes') : __('No');
-    }
-
-    function getClean($validate=true) {
-        if (!isset($this->_clean)) {
-            $this->_clean = (isset($this->value))
-                ? $this->value : $this->getValue();
-
-            if ($this->isVisible() && $validate)
-                $this->validateEntry($this->_clean);
-        }
-        return $this->_clean;
-    }
-
-    function getChanges() {
-        $new = $this->getValue();
-        $old = $this->answer ? $this->answer->getValue() : $this->get('default');
-
-        return ($old != $new) ? array($this->to_database($old), $this->to_database($new)) : false;
     }
 
     function getSearchMethods() {
@@ -1913,7 +1895,7 @@ class ChoiceField extends FormField {
                 $choices = explode("\n", $config['choices']);
                 foreach ($choices as $choice) {
                     // Allow choices to be key: value
-                    list($key, $val) = explode(':', $choice, 2);
+                    list($key, $val) = explode(':', $choice);
                     if ($val == null)
                         $val = $key;
                     $this->_choices[trim($key)] = trim($val);
@@ -1998,24 +1980,6 @@ class ChoiceField extends FormField {
     }
 
     function applyQuickFilter($query, $qf_value, $name=false) {
-        global $thisstaff;
-
-        //special assignment quick filters
-        switch (true) {
-            case ($qf_value == 'assigned'):
-            case ($qf_value == '!assigned'):
-                $result = AssigneeChoiceField::getSearchQ($qf_value, $qf_value);
-                return $query->filter($result);
-            case (strpos($qf_value, 's') !== false):
-            case (strpos($qf_value, 't') !== false):
-            case ($qf_value == 'M'):
-            case ($qf_value == 'T'):
-                $value = array($qf_value => $qf_value);
-                $result = AssigneeChoiceField::getSearchQ('includes', $value);
-                return $query->filter($result);
-                break;
-        }
-
         return $query->filter(array(
             $name ?: $this->get('name') => $qf_value,
         ));
@@ -2672,27 +2636,6 @@ class ThreadEntryField extends FormField {
 }
 
 class PriorityField extends ChoiceField {
-
-    var $priorities;
-    var $_choices;
-
-    function getPriorities() {
-        if (!isset($this->priorities))
-            $this->priorities = Priority::objects();
-
-        return $this->priorities;
-    }
-
-    function getPriority($id) {
-
-        if ($this->getPriorities() &&
-                ($p=$this->priorities->findFirst(array('priority_id' =>
-                                                       $id))))
-            return $p;
-
-        return Priority::lookup($id);
-    }
-
     function getWidget($widgetClass=false) {
         $widget = parent::getWidget($widgetClass);
         if ($widget->value instanceof Priority)
@@ -2705,15 +2648,15 @@ class PriorityField extends ChoiceField {
     }
 
     function getChoices($verbose=false) {
+        $sql = 'SELECT priority_id, priority_desc FROM '.PRIORITY_TABLE
+              .' ORDER BY priority_urgency DESC';
+        $choices = array('' => '— '.__('Default').' —');
+        if (!($res = db_query($sql)))
+            return $choices;
 
-        if (!isset($this->_choices)) {
-            $choices = array('' => '— '.__('Default').' —');
-            foreach ($this->getPriorities() as $p)
-                $choices[$p->getId()] = $p->getDesc();
-            $this->_choices = $choices;
-        }
-
-        return $this->_choices;
+        while ($row = db_fetch_row($res))
+            $choices[$row[0]] = $row[1];
+        return $choices;
     }
 
     function parse($id) {
@@ -2731,8 +2674,8 @@ class PriorityField extends ChoiceField {
             list($value, $id) = $value;
         elseif ($id === false)
             $id = $value;
-
-        return $this->getPriority($id);
+        if ($id)
+            return Priority::lookup($id);
     }
 
     function to_database($prio) {
@@ -3887,7 +3830,7 @@ class TextboxWidget extends Widget {
         if (isset($config['length']) && $config['length'])
             $maxlength = "maxlength=\"{$config['length']}\"";
         if (isset($config['classes']))
-            $classes = 'class="'.$config['classes'].'"';
+            $classes = 'class="form-control '.$config['classes'].'"';
         if (isset($config['autocomplete']))
             $autocomplete = 'autocomplete="'.($config['autocomplete']?'on':'off').'"';
         if (isset($config['autofocus']))
@@ -3905,7 +3848,10 @@ class TextboxWidget extends Widget {
             $type = $types[$config['validator']];
         $placeholder = sprintf('placeholder="%s"', $this->field->getLocal('placeholder',
             $config['placeholder']));
+        
+        $classes = $classes ? $classes : 'class="form-control"';     
         ?>
+        
         <input type="<?php echo $type; ?>"
             id="<?php echo $this->id; ?>"
             <?php echo implode(' ', array_filter(array(
@@ -3970,7 +3916,7 @@ class TextareaWidget extends Widget {
         if (isset($config['length']) && $config['length'])
             $maxlength = "maxlength=\"{$config['length']}\"";
         if (isset($config['html']) && $config['html']) {
-            $class = array('richtext', 'no-bar');
+            $class = array('richtext', 'no-bar', 'form-control');
             $class[] = @$config['size'] ?: 'small';
             $class = sprintf('class="%s"', implode(' ', $class));
             $this->value = Format::viewableImages($this->value);
@@ -4011,15 +3957,18 @@ class PhoneNumberWidget extends Widget {
         $config = $this->field->getConfiguration();
         list($phone, $ext) = explode("X", $this->value);
         ?>
-        <input id="<?php echo $this->id; ?>" type="tel" name="<?php echo $this->name; ?>" value="<?php
+        <div class="form-inline">
+        <input class="form-control" id="<?php echo $this->id; ?>" type="tel" name="<?php echo $this->name; ?>" value="<?php
         echo Format::htmlchars($phone); ?>"/><?php
         // Allow display of extension field even if disabled if the phone
         // number being edited has an extension
-        if ($ext || $config['ext']) { ?> <?php echo __('Ext'); ?>:
-            <input type="text" name="<?php
+        if ($ext || $config['ext']) { ?><?php echo __('Ext'); ?>:
+            <input class="form-control" type="text" name="<?php
             echo $this->name; ?>-ext" value="<?php echo Format::htmlchars($ext);
                 ?>" size="5"/>
-        <?php }
+        <?php } ?>
+        </div>    
+        <?php 
     }
 
     function getValue() {
@@ -4314,7 +4263,7 @@ class TimezoneWidget extends ChoicesWidget {
         $config = $this->field->getConfiguration();
         if (@$config['autodetect']) {
         ?>
-        <button type="button" class="action-button" onclick="javascript:
+        <button type="button" class="btn btn-primary action-button" onclick="javascript:
             $('head').append($('<script>').attr('src', '<?php
             echo ROOT_PATH; ?>js/jstz.min.js'));
             var recheck = setInterval(function() {
@@ -4620,7 +4569,7 @@ class FileUploadWidget extends Widget {
           allowedfiletypes: <?php echo JsonDataEncoder::encode(
             $mimetypes); ?>,
           maxfiles: <?php echo $config['max'] ?: 20; ?>,
-          maxfilesize: <?php echo str_replace(',', '.', $maxfilesize); ?>,
+          maxfilesize: <?php echo $maxfilesize; ?>,
           name: '<?php echo $name; ?>[]',
           files: <?php echo JsonDataEncoder::encode($files); ?>
         });});
@@ -4720,7 +4669,7 @@ class FreeTextField extends FormField {
 
     function to_config($config) {
         if ($config && isset($config['attachments']))
-            $keepers = $config['attachments'];
+            $keepers = $config['attachments'] = array_values($config['attachments']);
         $this->getAttachments()->keepOnlyFileIds($keepers);
 
         return $config;
