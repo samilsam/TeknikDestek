@@ -22,24 +22,13 @@ if(is_object($ost) && $ost->isSystemOnline()) {
 $nav=null;
 require(CLIENTINC_DIR.'header.inc.php');
 ?>
-<div class="fullpage app blank sidebar-opened">
-    <article class="content">
-        <div class="error-card global">
-            <div class="error-container">
-            <?php
-            if(($page=$cfg->getOfflinePage())) {
-                echo $page->getBodyWithImages();
-            } else {
-                echo '<h2 class="error-title">'.__('Support Ticket System Offline').'</h1>';
-            }
-            ?>
-            </div>
-            <div class="error-container">
-                <br>
-                <a class="btn btn-primary" href="index.php">
-                <i class="fa fa-angle-left"></i> Try Again</a>
-            </div>
-        </div>
-    </article>
+<div id="landing_page">
+<?php
+if(($page=$cfg->getOfflinePage())) {
+    echo $page->getBodyWithImages();
+} else {
+    echo '<h1>'.__('Support Ticket System Offline').'</h1>';
+}
+?>
 </div>
 <?php require(CLIENTINC_DIR.'footer.inc.php'); ?>
