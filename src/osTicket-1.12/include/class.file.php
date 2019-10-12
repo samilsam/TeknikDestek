@@ -261,17 +261,18 @@ class AttachmentFile extends VerySimpleModel {
     }
 
     function download($name=false, $disposition=false, $expires=false) {
-        $disposition = $disposition ?: 'inline';
+        $thisstaff = StaffAuthenticationBackend::getUser();
+        $inline = ($thisstaff ? ($thisstaff->getImageAttachmentView() === 'inline') : false);
+        $disposition = ((($disposition && strcasecmp($disposition, 'inline') == 0)
+              || $inline)
+              && strpos($this->getType(), 'image/') !== false)
+            ? 'inline' : 'attachment';
         $bk = $this->open();
         if ($bk->sendRedirectUrl($disposition))
             return;
         $ttl = ($expires) ? $expires - Misc::gmtime() : false;
         $this->makeCacheable($ttl);
         $type = $this->getType() ?: 'application/octet-stream';
-        if (isset($_REQUEST['overridetype']))
-            $type = $_REQUEST['overridetype'];
-        elseif (!strcasecmp($disposition, 'attachment'))
-            $type = 'application/octet-stream';
         Http::download($name ?: $this->getName(), $type, null, $disposition);
         header('Content-Length: '.$this->getSize());
         $this->sendData(false);

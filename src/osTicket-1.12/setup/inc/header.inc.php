@@ -13,8 +13,8 @@ if (($lang = Internationalization::getCurrentLanguage())
 <head>
     <title><?php echo $wizard['title']; ?></title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <link rel="stylesheet" href="css/wizard.css">
-    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/flags.css">
+    <link rel="stylesheet" href="css/wizard.css?bcf1a6f"/>
+    <link type="text/css" rel="stylesheet" href="<?php echo ROOT_PATH; ?>css/flags.css?bcf1a6f"/>
 </head>
 <body>
     <div id="wizard">
@@ -28,7 +28,7 @@ if (($lang = Internationalization::getCurrentLanguage())
                    foreach($wizard['menu'] as $k=>$v)
                     echo sprintf('<a target="_blank" href="%s">%s</a> &mdash; ',$v,$k);
                    ?>
-                    <a target="_blank" href="http://osticket.com/contact-us"><?php echo __('Contact Us');?></a>
+                    <a target="_blank" href="https://osticket.com/contact-us"><?php echo __('Contact Us');?></a>
                 </li>
             </ul>
             <div class="flags">

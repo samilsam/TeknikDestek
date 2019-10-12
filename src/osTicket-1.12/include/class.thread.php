@@ -228,7 +228,7 @@ implements Searchable {
 
             foreach ($vars['cid'] as $c) {
               $collab = Collaborator::lookup($c);
-              if (($collab instanceof Collaborator)) {
+              if(get_class($collab) == 'Collaborator') {
                 $collab->setFlag(Collaborator::FLAG_ACTIVE, true);
                 $collab->save();
               }
@@ -1514,7 +1514,7 @@ implements TemplateVariable {
                 $vars['body'] = new TextThreadEntryBody($vars['body']);
         }
 
-        if (!($body = Format::strip_emoticons($vars['body']->getClean())))
+        if (!($body = $vars['body']->getClean()))
             $body = '-'; //Special tag used to signify empty message as stored.
 
         $poster = $vars['poster'];
@@ -2989,7 +2989,7 @@ implements TemplateVariable {
     }
 
     function asVar() {
-        return new ThreadEntries($this);
+        return $this->getVar('complete');
     }
 
     function getVar($name) {
@@ -3013,14 +3013,21 @@ implements TemplateVariable {
 
             break;
         case 'complete':
-            return $this->asVar();
+            $content = '';
+            $thread = $this;
+            ob_start();
+            include INCLUDE_DIR.'client/templates/thread-export.tmpl.php';
+            $content = ob_get_contents();
+            ob_end_clean();
+            return $content;
+
             break;
         }
     }
 
     static function getVarScope() {
       return array(
-        'complete' =>array('class' => 'ThreadEntries', 'desc' => __('Thread Correspondence')),
+        'complete' => __('Thread Correspondence'),
         'original' => array('class' => 'MessageThreadEntry', 'desc' => __('Original Message')),
         'lastmessage' => array('class' => 'MessageThreadEntry', 'desc' => __('Last Message')),
       );
@@ -3037,47 +3044,6 @@ implements TemplateVariable {
             $class = get_called_class();
 
         return $class::lookup($criteria);
-    }
-}
-
-class ThreadEntries {
-    var $thread;
-
-    function __construct($thread) {
-        $this->thread = $thread;
-    }
-
-    function __tostring() {
-        return (string) $this->getVar();
-    }
-
-    function asVar() {
-        return $this->getVar();
-    }
-
-    function getVar($name='') {
-
-        $order = '';
-        switch ($name) {
-        case 'reversed':
-            $order = '-';
-        default:
-            $content = '';
-            $thread = $this->thread;
-            ob_start();
-            include INCLUDE_DIR.'client/templates/thread-export.tmpl.php';
-            $content = ob_get_contents();
-            ob_end_clean();
-            return $content;
-            break;
-        }
-    }
-
-    static function getVarScope() {
-      return array(
-        'reversed' => sprintf('%s %s', __('Thread Correspondence'),
-            __('in reversed order')),
-      );
     }
 }
 

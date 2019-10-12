@@ -30,22 +30,22 @@ if(OSTINSTALLED!=TRUE){
 }
 
 # Encrypt/Decrypt secret key - randomly generated during installation.
-define('SECRET_SALT','Uo08IBAeUg0T0vouGxNGaoev1FSkBhRi');
+define('SECRET_SALT',getenv('SECRET_SALT'));
 
 #Default admin email. Used only on db connection issues and related alerts.
-define('ADMIN_EMAIL','mokosam@gmail.com');
+define('ADMIN_EMAIL',getenv('ADMIN_EMAIL'));
 
 # Database Options
 # ---------------------------------------------------
 # Mysql Login info
 define('DBTYPE','mysql');
-define('DBHOST','db');
-define('DBNAME','osticket');
-define('DBUSER','root');
-define('DBPASS','osticketroot');
+define('DBHOST', getenv('MYSQL_HOST'));
+define('DBNAME', getenv('MYSQL_DATABASE'));
+define('DBUSER', getenv('MYSQL_USER'));
+define('DBPASS', getenv('MYSQL_PASSWORD'));
 
 # Table prefix
-define('TABLE_PREFIX','ost1_');
+define('TABLE_PREFIX','ost_');
 
 #
 # SSL Options

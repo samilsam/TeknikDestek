@@ -26,7 +26,8 @@ services:
       - ./configs/supervisord/osticket.conf:/etc/supervisor/conf.d/osticket.conf
       - ./configs/osticket/ost-config.php:/home/osticket/app/include/ost-config.php
       - ./configs/osticket/ost-configtempl.php:/home/osticket/app/include/ost-config.php
-
+    environment:
+      - LANGUAGE=tr
   db:
     image: mysql:5.7
     container_name: db

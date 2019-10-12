@@ -29,6 +29,9 @@ class MailFetcher {
     var $mbox;
     var $srvstr;
 
+    var $authuser;
+    var $username;
+
     var $charset = 'UTF-8';
 
     var $tnef = false;
@@ -48,7 +51,17 @@ class MailFetcher {
 
         $this->charset = $charset;
 
-        if($this->ht) {
+        if ($this->ht) {
+            // Support Exchange shared mailbox auth
+            // (eg. user@domain.com\shared@domain.com)
+            $usernames = explode('\\', $this->ht['username'], 2);
+            if (count($usernames) == 2) {
+                $this->authuser = $usernames[0];
+                $this->username = $usernames[1];
+            } else {
+                $this->username = $this->ht['username'];
+            }
+
             if(!strcasecmp($this->ht['protocol'],'pop')) //force pop3
                 $this->ht['protocol'] = 'pop3';
             else
@@ -62,6 +75,9 @@ class MailFetcher {
             $this->srvstr=sprintf('{%s:%d/%s', $this->getHost(), $this->getPort(), $this->getProtocol());
             if(!strcasecmp($this->getEncryption(), 'SSL'))
                 $this->srvstr.='/ssl';
+
+            if ($this->authuser)
+                $this->srvstr .= sprintf('/authuser=%s', $this->authuser);
 
             $this->srvstr.='/novalidate-cert}';
 
@@ -93,7 +109,7 @@ class MailFetcher {
     }
 
     function getUsername() {
-        return $this->ht['username'];
+        return $this->username;
     }
 
     function getPassword() {
@@ -671,6 +687,18 @@ class MailFetcher {
         // attachment. Download the body and pass it along to the mail
         // parsing engine.
         $info = Mail_Parse::splitHeaders($mailinfo['header']);
+
+        //make sure reply-to headers are correctly formatted
+        if ($mailinfo['reply-to'] && !Validator::is_email($mailinfo['reply-to']) && $info['Reply-To']) {
+            $replyto = Mail_Parse::parseAddressList($info['Reply-To']);
+            if ($replyto[0]) {
+                $mailinfo['reply-to'] = sprintf('%s@%s', $replyto[0]->mailbox, $replyto[0]->host);
+                $mailinfo['reply-to-name'] = $replyto[0]->personal;
+            } else {
+              $mailinfo['reply-to'] = null;
+            }
+        }
+
         if (strtolower($info['Content-Type']) == 'message/rfc822') {
             if ($wrapped = $this->getPart($mid, 'message/rfc822')) {
                 require_once INCLUDE_DIR.'api.tickets.php';
@@ -718,7 +746,7 @@ class MailFetcher {
                         $body = $this->fetchBody($mid, $info['index'].'.0',
                             $info['encoding']);
                         // Add fake body to make the parser happy
-                        if ($body)
+                        if (!$body)
                              $body.="\n\nJunk";
 
                         $parser = new Mail_Parse($body);

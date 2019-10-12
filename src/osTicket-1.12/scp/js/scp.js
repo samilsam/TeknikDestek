@@ -483,7 +483,7 @@ var scp_prep = function() {
 
   $('div.tab_content[id] div.error:not(:empty)').each(function() {
     var div = $(this).closest('.tab_content');
-    $('a[href^="#'+div.attr('id')+'"]').parent().addClass('error');
+    $('a[href^=#'+div.attr('id')+']').parent().addClass('error');
   });
 
   $('[data-toggle="tooltip"]').tooltip()
@@ -595,7 +595,6 @@ $(document).ajaxSend(function(event, xhr, settings) {
 /* Get config settings from the backend */
 jQuery.fn.exists = function() { return this.length>0; };
 
-$.pjax.defaults.timeout = 30000;
 $.translate_format = function(str) {
     var translation = {
         'DD':   'oo',
@@ -1132,7 +1131,7 @@ if ($.support.pjax) {
     if (!$this.hasClass('no-pjax')
         && !$this.closest('.no-pjax').length
         && $this.attr('href').charAt(0) != '#')
-      $.pjax.click(event, {container: $this.data('pjaxContainer') || '#pjax-container', timeout: 30000});
+      $.pjax.click(event, {container: $this.data('pjaxContainer') || '#pjax-container', timeout: 2000});
   })
 }
 
@@ -1168,16 +1167,15 @@ $(document).on('change', 'select[data-quick-add]', function() {
 });
 
 // Quick note interface
-$(document).on('click.note', '.quicknote .action.edit-note', function(e) {
-    // Prevent Auto-Scroll to top of page
-    e.preventDefault();
+$(document).on('click.note', '.quicknote .action.edit-note', function() {
     var note = $(this).closest('.quicknote'),
         body = note.find('.body'),
         T = $('<textarea>').text(body.html());
     if (note.closest('.dialog, .tip_box').length)
         T.addClass('no-bar small');
     body.replaceWith(T);
-    $.redact(T, { focusEnd: true });
+    $.redact(T);
+    $(T).redactor('focus.setStart');
     note.find('.action.edit-note').hide();
     note.find('.action.save-note').show();
     note.find('.action.cancel-edit').show();
@@ -1250,7 +1248,8 @@ $(document).on('click', '#new-note', function() {
     note.replaceWith(T);
     $('<p>').addClass('submit').css('text-align', 'center')
         .append(button).appendTo(T.parent());
-    $.redact(T, { focusEnd: true });
+    $.redact(T);
+    $(T).redactor('focus.setStart');
     return false;
 });
 
@@ -1302,25 +1301,49 @@ window.relativeAdjust = setInterval(function() {
 
 // Add 'afterShow' event to jQuery elements,
 // thanks http://stackoverflow.com/a/1225238/1025836
-jQuery(function($) {
+(function ($) {
     var _oldShow = $.fn.show;
 
-    // This should work with jQuery 3 with or without jQuery UI
-    $.fn.show = function() {
+    $.fn.show = function (/*speed, easing, callback*/) {
         var argsArray = Array.prototype.slice.call(arguments),
-            arg = argsArray[0],
-            options = argsArray[1] || {duration: 0};
-        if (typeof(arg) === 'number')
-            options.duration = arg;
-        else
-            options.effect = arg;
-        return this.each(function () {
-            var obj = $(this);
-            _oldShow.call(obj, $.extend(options, {
-                complete: function() {
-                    obj.trigger('afterShow');
-                }
-            }));
+            duration = argsArray[0],
+            easing,
+            callback,
+            callbackArgIndex;
+
+        // jQuery recursively calls show sometimes; we shouldn't
+        //  handle such situations. Pass it to original show method.
+        if (!this.selector) {
+            _oldShow.apply(this, argsArray);
+            return this;
+        }
+
+        if (argsArray.length === 2) {
+            if ($.isFunction(argsArray[1])) {
+                callback = argsArray[1];
+                callbackArgIndex = 1;
+            } else {
+                easing = argsArray[1];
+            }
+        } else if (argsArray.length === 3) {
+            easing = argsArray[1];
+            callback = argsArray[2];
+            callbackArgIndex = 2;
+        }
+        return $(this).each(function () {
+            var obj = $(this),
+                oldCallback = callback,
+                newCallback = function () {
+                    if ($.isFunction(oldCallback)) {
+                        oldCallback.apply(obj);
+                    }
+                };
+            if (callback) {
+                argsArray[callbackArgIndex] = newCallback;
+            }
+            obj.trigger('beforeShow');
+            _oldShow.apply(obj, argsArray);
+            obj.trigger('afterShow');
         });
-    }
-});
+    };
+})(jQuery);
